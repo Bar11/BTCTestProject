@@ -27,8 +27,8 @@ func (cli *CLI) validateArgs() {
 	}
 }
 
-func (cli *CLI) addBlock(data string) {
-	cli.Blockchain.AddBlock(data)
+func (cli *CLI) addBlock(transactions []*code.Transaction) {
+	cli.Blockchain.AddBlock(transactions)
 	fmt.Println("Added block successfully!")
 }
 
@@ -38,7 +38,7 @@ func (cli *CLI) showBlockChain() {
 		block := bci.Next()
 		fmt.Printf("timestamp:%d\n", block.Timestamp)
 		fmt.Printf("PrevBlockHash:%x\n", block.PrevBlockHash)
-		fmt.Printf("data:%s\n", block.Data)
+		fmt.Printf("data:%s\n", block.Transactions[0].ID)
 		fmt.Printf("Hash:%x\n", block.Hash)
 		pow := code.NewProofOfWork(block)
 		fmt.Printf("pow %s\n", strconv.FormatBool(pow.Validate()))
