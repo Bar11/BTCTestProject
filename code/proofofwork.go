@@ -32,8 +32,8 @@ func NewProofOfWork(b *Block) *ProofOfWork {
 func (pow *ProofOfWork) prepareData(nonce int) []byte {
 	data := bytes.Join(
 		[][]byte{
-			pow.Block.PrevBlockHash,             //上一块哈希
-			pow.Block.Transactions,              //当前数据
+			pow.Block.PrevBlockHash, //上一块哈希
+			//pow.Block.Transactions,              //当前数据
 			utils.IntToHex(pow.Block.Timestamp), //时间十六进制
 			utils.IntToHex(int64(targetBits)),   //位数十六进制
 			utils.IntToHex(int64(nonce)),        //保存工作量的证明
