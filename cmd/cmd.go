@@ -2,7 +2,6 @@ package cmd
 
 import (
 	"BTCTestProject/code"
-	"BTCTestProject/db"
 	"flag"
 	"fmt"
 	"log"
@@ -11,7 +10,7 @@ import (
 )
 
 type CLI struct {
-	Blockchain *db.Blockchain
+	Blockchain *code.Blockchain
 }
 
 func (cli *CLI) PrintUsage() {
