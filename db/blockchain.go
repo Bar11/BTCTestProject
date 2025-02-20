@@ -2,8 +2,8 @@ package db
 
 import (
 	"BTCTestProject/code"
-	"BTCTestProject/pkg/pkg/mod/github.com/boltdb/bolt@v1.3.1"
 	"fmt"
+	"github.com/boltdb/bolt"
 	"log"
 )
 
@@ -13,7 +13,7 @@ const blockBucket = "blocks"   // 名称
 type Blockchain struct {
 	//Blocks []*code.Block // 一个数组，每个元素都是指针，存储block区块的地址
 	Tip []byte
-	db  *bolt.DB
+	DB  *bolt.DB
 }
 
 type BlockchainIterator struct {
@@ -61,7 +61,7 @@ func NewBlockchain() *Blockchain {
 
 func (bc *Blockchain) AddBlock(data string) {
 	var lastHash []byte
-	err := bc.db.View(func(tx *bolt.Tx) error {
+	err := bc.DB.View(func(tx *bolt.Tx) error {
 		b := tx.Bucket([]byte(blockBucket)) //取得数据
 		lastHash = b.Get([]byte("1"))       //取得第一个块
 		return nil
@@ -70,7 +70,7 @@ func (bc *Blockchain) AddBlock(data string) {
 		log.Panic(err)
 	}
 	newBlock := code.NewBlock(data, lastHash)
-	err = bc.db.Update(func(tx *bolt.Tx) error {
+	err = bc.DB.Update(func(tx *bolt.Tx) error {
 		bucket := tx.Bucket([]byte(blockBucket))               //取出
 		err := bucket.Put(newBlock.Hash, newBlock.Serialize()) //压入数据
 		if err != nil {
@@ -86,7 +86,7 @@ func (bc *Blockchain) AddBlock(data string) {
 }
 
 func (bc *Blockchain) Iterator() *BlockchainIterator {
-	bci := &BlockchainIterator{bc.Tip, bc.db}
+	bci := &BlockchainIterator{bc.Tip, bc.DB}
 	return bci //根据区块链创建区块链迭代器
 
 }

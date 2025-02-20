@@ -11,13 +11,13 @@ import (
 )
 
 type CLI struct {
-	blockchain *db.Blockchain
+	Blockchain *db.Blockchain
 }
 
 func (cli *CLI) PrintUsage() {
 	fmt.Println("Usage:")
 	fmt.Println("\t addblock 向区块链增加快")
-	fmt.Println("\t shoewchain 显示区块链")
+	fmt.Println("\t showchain 显示区块链")
 	fmt.Println("\t addblock 向区块链增加快")
 }
 
@@ -29,12 +29,12 @@ func (cli *CLI) validateArgs() {
 }
 
 func (cli *CLI) addBlock(data string) {
-	cli.blockchain.AddBlock(data)
+	cli.Blockchain.AddBlock(data)
 	fmt.Println("Added block successfully!")
 }
 
 func (cli *CLI) showBlockChain() {
-	bci := cli.blockchain.Iterator()
+	bci := cli.Blockchain.Iterator()
 	for {
 		block := bci.Next()
 		fmt.Printf("timestamp:%d\n", block.Timestamp)
@@ -60,7 +60,7 @@ func (cli *CLI) Run() {
 	addBlockData := addblockcmd.String("data", "", "Block data")
 	switch os.Args[1] {
 	case "addblock":
-		err := addblockcmd.Parse(os.Args[2:])
+		err := addblockcmd.Parse(os.Args[2:]) //解析参数
 		if err != nil {
 			log.Panic(err)
 		}
@@ -75,7 +75,8 @@ func (cli *CLI) Run() {
 
 	}
 	if addblockcmd.Parsed() {
-		if *addBlockData != "" {
+		if *addBlockData == "" {
+
 			addblockcmd.Usage()
 			os.Exit(1)
 		} else {

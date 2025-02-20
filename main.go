@@ -25,9 +25,9 @@ func main() {
 	//	fmt.Printf("pow %s\n", strconv.FormatBool(pow.Validate()))
 	//	fmt.Println()
 	//}
-	block := db.NewBlockchain()
-	defer block.db.Close()
-	cli := cmd.CLI{block}
-	cli.RUN()
+	block := db.NewBlockchain() //创建区块链
+	defer block.DB.Close()      // 关闭数据库
+	cli := cmd.CLI{block}       //创建命令行
+	cli.Run()
 
 }
