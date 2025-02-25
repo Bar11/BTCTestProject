@@ -1,3 +1,1 @@
-
-
-Learning of blockchain Bitcoin model
+A self-education project to deeply understand how Bitcoin works under the hood.
