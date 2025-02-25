@@ -26,10 +26,58 @@ type BlockchainIterator struct {
 // 新建一个区块链
 func NewBlockchain(address string) *Blockchain {
 	if dbExists() == false {
-		fmt.Println("Creating new db")
+		fmt.Println("please create new db")
 		os.Exit(1)
 	}
-	return CreateBlockChain(address)
+	var tip []byte //存储区块链的二进制数据
+	db, err := bolt.Open(dbFile, 0600, nil)
+	if err != nil {
+		log.Panic(err)
+	}
+	err = db.Update(func(tx *bolt.Tx) error {
+		bucket := tx.Bucket([]byte(blockBucket))
+		tip = bucket.Get([]byte("1"))
+		return nil
+	})
+
+	bc := Blockchain{tip, db}
+	return &bc
+	//return CreateBlockChain(address)
+}
+
+// 创建一个区块链创建一个数据库
+func CreateBlockChain(address string) *Blockchain {
+	if dbExists() {
+		fmt.Println("db already exists")
+		os.Exit(1)
+	}
+	fmt.Println("creating new blockchain")
+	var tip []byte //存储区块链的二进制数据
+	db, err := bolt.Open(dbFile, 0600, nil)
+	if err != nil {
+		log.Panic(err)
+	}
+	err = db.Update(func(tx *bolt.Tx) error {
+		cbtx := NewCoinBaseTX(address, genesisCoinbaseData)
+		genesis := NewGenesisBlock(cbtx)
+		b, err := tx.CreateBucket([]byte(blockBucket))
+		if err != nil {
+			log.Panic(err)
+		}
+		err = b.Put(genesis.Hash, genesis.Serialize())
+		if err != nil {
+			log.Panic(err)
+		}
+		err = b.Put([]byte("1"), genesis.Hash)
+		if err != nil {
+			log.Panic(err)
+		}
+		tip = genesis.Hash
+		return nil
+	})
+
+	bc := Blockchain{tip, db}
+	return &bc
 }
 
 // 挖矿带来的交易（）
@@ -83,7 +131,7 @@ func (bc *Blockchain) FindUnSpendableOutPuts(address string) []Transaction {
 			}
 			if tx.IsCoinBase() == false {
 				for _, in := range tx.Vin {
-					if in.CanUnlockOutPutWith(address) { //判断是否可以锁定
+					if in.CanUnlockOutputWith(address) { //判断是否可以锁定
 						inTxID := hex.EncodeToString(in.Txid)
 						spentTXOS[inTxID] = append(spentTXOS[inTxID], in.Vout)
 					}
@@ -182,62 +230,9 @@ func (it *BlockchainIterator) Next() *Block {
 	return block
 }
 
-// 创建一个区块链创建一个数据库
-func CreateBlockChain(address string) *Blockchain {
-	if dbExists() {
-		fmt.Println("db already exists")
-		os.Exit(1)
-	}
-	var tip []byte //存储区块链的二进制数据
-	db, err := bolt.Open(dbFile, 0600, nil)
-	if err != nil {
-		log.Panic(err)
-	}
-	err = db.Update(func(tx *bolt.Tx) error {
-		cbtx := NewCoinBaseTX(address, genesisCoinbaseData)
-		genesis := NewGenesisBlock(cbtx)
-		b, err := tx.CreateBucket([]byte(blockBucket))
-		if err != nil {
-			log.Panic(err)
-		}
-		err = b.Put(genesis.Hash, genesis.Serialize())
-		if err != nil {
-			log.Panic(err)
-		}
-		err = b.Put([]byte("1"), genesis.Hash)
-		if err != nil {
-			log.Panic(err)
-		}
-		tip = genesis.Hash
-		return nil
-	})
-
-	bc := Blockchain{tip, db}
-	return &bc
-}
-
 func dbExists() bool {
 	if _, err := os.Stat(dbFile); os.IsNotExist(err) {
 		return false
 	}
 	return true
 }
-
-//type Blockchain struct {
-//	Blocks []*code.Block // 一个数组，每个元素都是指针，存储block区块的地址
-//
-//}
-
-//// 增加一个区块
-//func (blocks *Blockchain) AddBlock(data string) {
-//	prevBlock := blocks.Blocks[len(blocks.Blocks)-1] // 取出最后一个区块
-//	newBlock := code.NewBlock(data, prevBlock.Hash)  // 创建一个区块
-//	blocks.Blocks = append(blocks.Blocks, newBlock)  //区块链插入新的区块
-//}
-//
-//// 创建一个区块链
-//func NewBlockchain() *Blockchain {
-//	return &Blockchain{[]*code.Block{
-//		code.NewGenesisBlock(),
-//	}}
-//}

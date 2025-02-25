@@ -10,7 +10,7 @@ import (
 )
 
 // 挖矿奖励
-const subsidy = 10
+const subsidy = 100
 
 // 输入
 type TXInput struct {
@@ -56,7 +56,7 @@ func (out *TXOutput) CanBeUnlockedWith(unlockingData string) bool {
 	return out.ScriptPubKey == unlockingData
 }
 
-func (input *TXInput) CanUnlockOutPutWith(unlockingData string) bool {
+func (input *TXInput) CanUnlockOutputWith(unlockingData string) bool {
 	return input.ScriptSig == unlockingData
 }
 
@@ -77,6 +77,7 @@ func NewCoinBaseTX(to, data string) *Transaction {
 
 // 转账交易
 func NewUTXTransaction(from, to string, amount int, bc *Blockchain) *Transaction {
+
 	var inputs []TXInput
 	var outputs []TXOutput
 	acc, validOutputs := bc.FindSpendableOutPuts(from, amount)
@@ -102,5 +103,7 @@ func NewUTXTransaction(from, to string, amount int, bc *Blockchain) *Transaction
 		outputs = append(outputs, TXOutput{acc - amount, from})
 
 	}
-	return &Transaction{}
+	tx := Transaction{nil, inputs, outputs}
+	tx.SetID()
+	return &tx
 }

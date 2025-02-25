@@ -2,7 +2,6 @@ package main
 
 import (
 	"BTCTestProject/cmd"
-	"BTCTestProject/code"
 )
 
 //TIP <p>To run your code, right-click the code and select <b>Run</b>.</p> <p>Alternatively, click
@@ -25,9 +24,8 @@ func main() {
 	//	fmt.Printf("pow %s\n", strconv.FormatBool(pow.Validate()))
 	//	fmt.Println()
 	//}
-	block := code.NewBlockchain("123123123") //创建区块链
-	defer block.DB.Close()                   // 关闭数据库
-	cli := cmd.CLI{block}                    //创建命令行
+
+	cli := cmd.CLI{} //创建命令行
 	cli.Run()
 
 }
