@@ -17,10 +17,10 @@ type Wallets struct {
 }
 
 // 新建一个钱包，或者获取已存在的钱包
-func NewWallets(nodeID string) (*Wallets, error) {
+func NewWallets() (*Wallets, error) {
 	wallets := Wallets{}
 	wallets.Wallets = make(map[string]*Wallet)
-	err := wallets.LoadFromFile(nodeID)
+	err := wallets.LoadFromFile()
 	return &wallets, err
 }
 
@@ -46,9 +46,9 @@ func (wallets *Wallets) GetWallte(address string) Wallet {
 }
 
 // 从文件中读取钱包
-func (wallets *Wallets) LoadFromFile(nodeID string) error {
+func (wallets *Wallets) LoadFromFile() error {
 
-	mywalletfile := fmt.Sprintf(walletFile, nodeID)
+	mywalletfile := walletfile
 	if _, err := os.Stat(mywalletfile); os.IsNotExist(err) {
 		return err
 	}
@@ -69,9 +69,9 @@ func (wallets *Wallets) LoadFromFile(nodeID string) error {
 }
 
 // 钱包保存到文件
-func (wallets *Wallets) SaveToFile(nodeID string) {
+func (wallets *Wallets) SaveToFile() {
 	var content bytes.Buffer
-	mywalletfile := fmt.Sprintf(walletFile, nodeID)
+	mywalletfile := walletfile
 	gob.Register(elliptic.P256()) // 注册加密算法
 	encoder := gob.NewEncoder(&content)
 	err := encoder.Encode(wallets)
