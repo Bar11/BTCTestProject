@@ -2,11 +2,11 @@ package code
 
 import (
 	"bytes"
-	"crypto"
 	"crypto/ecdsa"
 	"crypto/elliptic"
 	"crypto/rand"
 	"crypto/sha256"
+	"golang.org/x/crypto/ripemd160"
 	"log"
 )
 
@@ -50,7 +50,7 @@ func checkSum(data []byte) []byte {
 // 公钥的哈希处理
 func HashPubKey(pubkey []byte) []byte {
 	publicsha256 := sha256.Sum256(pubkey)     // 处理公钥
-	R160Hash := crypto.RIPEMD160.New()        // 创建一个哈希算法对象
+	R160Hash := ripemd160.New()               // 创建一个哈希算法对象
 	_, err := R160Hash.Write(publicsha256[:]) // 写入处理
 	if err != nil {
 		log.Panic(err)
@@ -72,9 +72,10 @@ func (w *Wallet) GetAddress() []byte {
 // 校验钱包地址
 func ValidateAddress(address string) bool {
 	publicHash := Base58Decode([]byte(address))
-	actualChecksum := publicHash[len(publicHash)-addressChecksumLen:]
 	version := publicHash[0]
-	publicHash = publicHash[1 : len(publicHash)-addressChecksumLen]
-	targetCheckSum := checkSum(append([]byte{version}, publicHash...))
+	actualChecksum := publicHash[len(publicHash)-addressChecksumLen:]
+	payload := publicHash[1 : len(publicHash)-addressChecksumLen]
+	targetCheckSum := checkSum(append([]byte{version}, payload...))
+
 	return bytes.Compare(actualChecksum, targetCheckSum) == 0
 }

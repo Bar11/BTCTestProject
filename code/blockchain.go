@@ -21,13 +21,8 @@ type Blockchain struct {
 	DB  *bolt.DB
 }
 
-type BlockchainIterator struct {
-	currentHash []byte
-	db          *bolt.DB
-}
-
 // 新建一个区块链
-func NewBlockchain(address string) *Blockchain {
+func NewBlockchain() *Blockchain {
 	if dbExists() == false {
 		fmt.Println("please create new db")
 		os.Exit(1)
@@ -42,7 +37,9 @@ func NewBlockchain(address string) *Blockchain {
 		tip = bucket.Get([]byte("1"))
 		return nil
 	})
-
+	if err != nil {
+		log.Panic(err)
+	}
 	bc := Blockchain{tip, db}
 	return &bc
 	//return CreateBlockChain(address)
@@ -55,14 +52,15 @@ func CreateBlockChain(address string) *Blockchain {
 		os.Exit(1)
 	}
 	fmt.Println("creating new blockchain")
+
 	var tip []byte //存储区块链的二进制数据
+	cbtx := NewCoinBaseTX(address, genesisCoinbaseData)
+	genesis := NewGenesisBlock(cbtx)
 	db, err := bolt.Open(dbFile, 0600, nil)
 	if err != nil {
 		log.Panic(err)
 	}
 	err = db.Update(func(tx *bolt.Tx) error {
-		cbtx := NewCoinBaseTX(address, genesisCoinbaseData)
-		genesis := NewGenesisBlock(cbtx)
 		b, err := tx.CreateBucket([]byte(blockBucket))
 		if err != nil {
 			log.Panic(err)
@@ -111,7 +109,7 @@ func (bc *Blockchain) MineBlock(transactions []*Transaction) {
 }
 
 // 查找没有使用输出的交易列表
-func (bc *Blockchain) FindUnSpendableOutPuts(address string) []Transaction {
+func (bc *Blockchain) FindUnSpendableOutPuts(pubkeyhash []byte) []Transaction {
 	var unspendTXs []Transaction
 	spentTXOS := make(map[string][]int) // 开辟内存
 	bci := bc.Iterator()
@@ -128,13 +126,13 @@ func (bc *Blockchain) FindUnSpendableOutPuts(address string) []Transaction {
 						}
 					}
 				}
-				if out.CanBeUnlockedWith(address) {
+				if out.IsLockedWithKey(pubkeyhash) {
 					unspendTXs = append(unspendTXs, *tx) //加入列表
 				}
 			}
 			if tx.IsCoinBase() == false {
 				for _, in := range tx.Vin {
-					if in.CanUnlockOutputWith(address) { //判断是否可以锁定
+					if in.UsesKey(pubkeyhash) { //判断是否可以锁定
 						inTxID := hex.EncodeToString(in.Txid)
 						spentTXOS[inTxID] = append(spentTXOS[inTxID], in.Vout)
 					}
@@ -150,12 +148,12 @@ func (bc *Blockchain) FindUnSpendableOutPuts(address string) []Transaction {
 }
 
 // 获取所有没有使用的交易
-func (bc *Blockchain) FindUTXO(address string) []TXOutput {
+func (bc *Blockchain) FindUTXO(pubkeyhash []byte) []TXOutput {
 	var utxos []TXOutput
-	unsentTransactions := bc.FindUnSpendableOutPuts(address)
+	unsentTransactions := bc.FindUnSpendableOutPuts(pubkeyhash)
 	for _, tx := range unsentTransactions {
 		for _, out := range tx.Vout {
-			if out.CanBeUnlockedWith(address) { //是否锁定
+			if out.IsLockedWithKey(pubkeyhash) { //是否锁定
 				utxos = append(utxos, out)
 			}
 		}
@@ -164,15 +162,15 @@ func (bc *Blockchain) FindUTXO(address string) []TXOutput {
 }
 
 // 查找没有使用的输出以参考输入
-func (bc *Blockchain) FindSpendableOutPuts(address string, amount int) (int, map[string][]int) {
-	unspentoutputs := make(map[string][]int)         // 输出
-	unspenttxs := bc.FindUnSpendableOutPuts(address) //根据地质查询所有交易
-	accmulated := 0                                  // 累计
+func (bc *Blockchain) FindSpendableOutPuts(pubkeyhash []byte, amount int) (int, map[string][]int) {
+	unspentoutputs := make(map[string][]int)            // 输出
+	unspenttxs := bc.FindUnSpendableOutPuts(pubkeyhash) //根据地质查询所有交易
+	accmulated := 0                                     // 累计
 Work:
 	for _, tx := range unspenttxs {
 		txID := hex.EncodeToString(tx.ID)
 		for outIndex, out := range tx.Vout {
-			if out.CanBeUnlockedWith(address) && accmulated < amount {
+			if out.IsLockedWithKey(pubkeyhash) && accmulated < amount {
 				accmulated += out.Value
 				unspentoutputs[txID] = append(unspentoutputs[txID], outIndex)
 				if accmulated >= amount {
@@ -217,22 +215,6 @@ func (bc *Blockchain) Iterator() *BlockchainIterator {
 
 }
 
-func (it *BlockchainIterator) Next() *Block {
-	var block *Block
-	err := it.db.View(func(tx *bolt.Tx) error {
-		b := tx.Bucket([]byte(blockBucket))
-		encodedBlock := b.Get(it.currentHash) //获取二进制数据
-		block, _ = Deserialize(encodedBlock)
-
-		return nil
-	})
-	if err != nil {
-		log.Panic(err)
-	}
-	it.currentHash = block.PrevBlockHash
-	return block
-}
-
 func dbExists() bool {
 	if _, err := os.Stat(dbFile); os.IsNotExist(err) {
 		return false
@@ -266,4 +248,16 @@ func (bc *Blockchain) FindTransaction(ID []byte) (Transaction, error) {
 		}
 	}
 	return Transaction{}, errors.New("Transaction not found")
+}
+
+func (bc *Blockchain) VerifyTransaction(tx *Transaction) bool {
+	prevTXs := make(map[string]Transaction)
+	for _, vin := range tx.Vin {
+		prevTX, err := bc.FindTransaction(vin.Txid)
+		if err != nil {
+			log.Panic(err)
+		}
+		prevTXs[hex.EncodeToString(prevTX.ID)] = prevTX
+	}
+	return tx.Verify(prevTXs)
 }

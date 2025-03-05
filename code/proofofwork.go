@@ -59,7 +59,7 @@ func (pow *ProofOfWork) Run() (int, []byte) {
 			nonce++
 		}
 	}
-	fmt.Println("\n\n")
+	//fmt.Println("\n\n")
 	return nonce, hash[:]
 
 }

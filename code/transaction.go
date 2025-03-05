@@ -201,7 +201,7 @@ func NewCoinBaseTX(to, data string) *Transaction {
 }
 
 // 转账交易
-func NewUTXTransaction(from, to string, amount int, bc *Blockchain) *Transaction {
+func NewUTXOTransaction(from, to string, amount int, bc *Blockchain) *Transaction {
 
 	var inputs []TXInput
 	var outputs []TXOutput
@@ -210,10 +210,10 @@ func NewUTXTransaction(from, to string, amount int, bc *Blockchain) *Transaction
 	if err != nil {
 		log.Panic(err)
 	}
-	wallet := wallets.GetWallte(from)
+	wallet := wallets.GetWallet(from)
 	pubkeyHash := HashPubKey(wallet.PublicKey)
 
-	acc, validOutputs := bc.FindSpendableOutPuts(from, amount)
+	acc, validOutputs := bc.FindSpendableOutPuts(pubkeyHash, amount)
 	if acc < amount {
 		log.Panic("ERROR: Not enough funds")
 	}
@@ -225,14 +225,14 @@ func NewUTXTransaction(from, to string, amount int, bc *Blockchain) *Transaction
 		}
 		for _, out := range out {
 			// 输入的交易
-			input := TXInput{txID, out, nil, pubkeyHash}
+			input := TXInput{txID, out, nil, wallet.PublicKey}
 			// 输出的交易
 			inputs = append(inputs, input)
 		}
 	}
 	outputs = append(outputs, *NewTXOutput(amount, to))
 	if acc > amount {
-		outputs = append(outputs, *NewTXOutput(acc-amount, to))
+		outputs = append(outputs, *NewTXOutput(acc-amount, from))
 	}
 	tx := Transaction{nil, inputs, outputs}
 	tx.ID = tx.Hash()
